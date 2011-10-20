@@ -38,7 +38,11 @@ public class Repository<T> implements IRepository<T> {
 	@Autowired
 	protected RepositoryImpl repository;
 	
-	private static final SimpleDateFormat SQLITE_FORMAT = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+	private static final SimpleDateFormat SQLITE_DATE_FORMAT =
+	    new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+	
+	private static final SimpleDateFormat SQLITE_TIMESTAMP_FORMAT =
+		new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
 	
 	public void setRepository(final RepositoryImpl repo) {
 		this.repository = repo;
@@ -54,13 +58,26 @@ public class Repository<T> implements IRepository<T> {
 		return repository.list(query, mapper, args);
 	}
 	
+	public static Date readTimestamp(final ResultSet rs, final String columnName) throws SQLException {
+		final String dateValue = rs.getString(columnName);
+		if (null == dateValue || "".equalsIgnoreCase(dateValue.trim())) { return null ; }
+		if (dateValue.trim().startsWith("-4")) { return null; } // Some of the data has timestamps that go back to 4712 BC
+		Date dt = null;
+		try {
+			synchronized(SQLITE_TIMESTAMP_FORMAT) {
+				dt = SQLITE_TIMESTAMP_FORMAT.parse(dateValue);
+			}
+		} catch (ParseException ignoreMe) { } // NOPMD
+		return dt;
+	}
+	
 	public static Date readDate(final ResultSet rs, final String columnName) throws SQLException {
 		final String dateValue = rs.getString(columnName);
 		if (null == dateValue || "".equalsIgnoreCase(dateValue.trim())) { return null ; }
 		Date dt = null;
 		try {
-			synchronized(SQLITE_FORMAT) {
-				dt = SQLITE_FORMAT.parse(dateValue);
+			synchronized(SQLITE_DATE_FORMAT) {
+				dt = SQLITE_DATE_FORMAT.parse(dateValue);
 			}
 		} catch (ParseException ignoreMe) { } // NOPMD
 		return dt;
